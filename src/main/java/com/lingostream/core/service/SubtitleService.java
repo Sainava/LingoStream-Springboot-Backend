@@ -4,6 +4,8 @@ import com.lingostream.core.entity.SubtitleEntity;
 import com.lingostream.core.repository.SubtitleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +15,8 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -20,6 +24,7 @@ import java.util.List;
 public class SubtitleService {
 
     private final SubtitleRepository subtitleRepository;
+    private final RedissonClient redissonClient; // Redis Client
 
     @Transactional
     public void parseAndSaveSrt(Resource resource, String videoId, String languageCode) {
@@ -88,5 +93,41 @@ public class SubtitleService {
         long seconds = Long.parseLong(parts[2]);
         long millis = Long.parseLong(parts[3]);
         return (hours * 3600_000) + (minutes * 60_000) + (seconds * 1000) + millis;
+    }
+
+    @Transactional
+    public SubtitleEntity updateSubtitle(UUID id, String newContent) {
+        // Create a highly specific lock just for this one subtitle row
+        String lockKey = "lock:subtitle:" + id.toString();
+        RLock lock = redissonClient.getLock(lockKey);
+
+        try {
+            // Wait up to 5 seconds to get the lock. If acquired, hold it for a max of 10 seconds.
+            boolean isLocked = lock.tryLock(5, 10, TimeUnit.SECONDS);
+
+            if (!isLocked) {
+                log.warn("Collision detected! Could not acquire lock for subtitle: {}", id);
+                throw new RuntimeException("Another translator is currently editing this line. Please try again.");
+            }
+
+            log.info("Lock acquired for subtitle {}. Updating content...", id);
+
+            // Fetch, update, and save
+            SubtitleEntity subtitle = subtitleRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Subtitle not found"));
+
+            subtitle.setContent(newContent);
+            return subtitleRepository.save(subtitle);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("System interrupted while waiting for lock", e);
+        } finally {
+            // CRITICAL: Always release the lock so other users aren't frozen out forever
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+                log.info("Lock released for subtitle {}", id);
+            }
+        }
     }
 }
