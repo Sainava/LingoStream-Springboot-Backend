@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/lingostream
+    username: sainavamodak
+    password:
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # 'update' tells Hibernate to automatically create our tables when we write our Java Entity
+      ddl-auto: update
+    # These two settings print the actual SQL to your console so you can see what Spring is doing behind the scenes
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
