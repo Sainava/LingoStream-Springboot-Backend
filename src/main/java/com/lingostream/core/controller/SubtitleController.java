@@ -1,7 +1,6 @@
 package com.lingostream.core.controller;
 
 import com.lingostream.core.entity.SubtitleEntity;
-import com.lingostream.core.repository.SubtitleRepository;
 import com.lingostream.core.service.SubtitleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +14,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SubtitleController {
 
-    private final SubtitleRepository subtitleRepository;
+    // Notice we deleted the SubtitleRepository! The Controller now only talks to the Service.
     private final SubtitleService subtitleService;
 
     @GetMapping("/{videoId}")
@@ -23,8 +22,8 @@ public class SubtitleController {
             @PathVariable String videoId,
             @RequestParam(name = "language", defaultValue = "en") String languageCode) {
 
-        List<SubtitleEntity> subtitles = subtitleRepository
-                .findByVideoIdAndLanguageCodeOrderByStartTimeMsAsc(videoId, languageCode);
+        // This request now hits the Redis Cache interceptor before ever reaching the database
+        List<SubtitleEntity> subtitles = subtitleService.getSubtitles(videoId, languageCode);
 
         if (subtitles.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -41,7 +40,6 @@ public class SubtitleController {
             SubtitleEntity updated = subtitleService.updateSubtitle(id, newContent);
             return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
-            // If the lock is held, we return a 409 Conflict
             return ResponseEntity.status(409).body(e.getMessage());
         }
     }

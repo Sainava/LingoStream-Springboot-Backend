@@ -1,5 +1,7 @@
 package com.lingostream.core.service;
 
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 import com.lingostream.core.entity.SubtitleEntity;
 import com.lingostream.core.repository.SubtitleRepository;
 import lombok.RequiredArgsConstructor;
@@ -95,6 +97,15 @@ public class SubtitleService {
         return (hours * 3600_000) + (minutes * 60_000) + (seconds * 1000) + millis;
     }
 
+    @Cacheable(value = "subtitles", key = "#videoId + '_' + #languageCode")
+    public List<SubtitleEntity> getSubtitles(String videoId, String languageCode) {
+        // This shows that Redis was empty and PostgreSQL had to do the work!
+        log.warn("CACHE MISS: Fetching {} [{}] from PostgreSQL database...", videoId, languageCode);
+
+        return subtitleRepository.findByVideoIdAndLanguageCodeOrderByStartTimeMsAsc(videoId, languageCode);
+    }
+
+    @CacheEvict(value = "subtitles", key = "#result.videoId + '_' + #result.languageCode")
     @Transactional
     public SubtitleEntity updateSubtitle(UUID id, String newContent) {
         // Create a highly specific lock just for this one subtitle row
