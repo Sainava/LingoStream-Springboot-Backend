@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # 1. The Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=lingostream
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. The Cache & Lock Manager
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # 3. The Spring Boot Application
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      # Dynamically override the application.yml settings to point to the Docker containers
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/lingostream
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+    depends_on:
+      - postgres
+      - redis
+
+# This ensures database isn't wiped out every time we stop the container
+volumes:
+  postgres_data:
