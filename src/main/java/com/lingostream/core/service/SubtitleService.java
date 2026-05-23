@@ -11,6 +11,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -27,6 +28,7 @@ public class SubtitleService {
 
     private final SubtitleRepository subtitleRepository;
     private final RedissonClient redissonClient; // Redis Client
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public void parseAndSaveSrt(Resource resource, String videoId, String languageCode) {
@@ -128,7 +130,15 @@ public class SubtitleService {
                     .orElseThrow(() -> new RuntimeException("Subtitle not found"));
 
             subtitle.setContent(newContent);
-            return subtitleRepository.save(subtitle);
+            SubtitleEntity savedSubtitle = subtitleRepository.save(subtitle);
+
+            // --- THE WEBSOCKET BROADCAST ---
+            // Shout the new subtitle data to anyone subscribed to this specific video's channel
+            String destination = "/topic/subtitles/" + savedSubtitle.getVideoId();
+            messagingTemplate.convertAndSend(destination, savedSubtitle);
+            log.info("Broadcasted live update to {}", destination);
+
+            return savedSubtitle;
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
