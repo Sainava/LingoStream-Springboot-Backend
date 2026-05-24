@@ -1,10 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LingoStream Live Editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body { font-family: -apple-system, sans-serif; background-color: #1e1e1e; color: #fff; padding: 40px; }
+        .box { background: #333; padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #4CAF50; }
+        .timestamp { color: #888; font-size: 0.8em; margin-bottom: 5px; }
+        .content { font-size: 1.2em; font-weight: bold; }
+    </style>
+</head>
 <body>
-<h2>🔴 Live Subtitle Stream: Iron Man</h2>
+<h2>Live Subtitle Stream: Iron Man</h2>
 
 <div style="background: #2a2a2a; padding: 15px; border-radius: 5px; margin-bottom: 20px; font-family: monospace; font-size: 0.9em; border: 1px solid #444;">
     <span style="color: #888;">// HOW TO TEST THIS LIVE CONNECTION:</span><br>
     <span style="color: #888;">// 1. Open your terminal.</span><br>
-    <span style="color: #888;">// 2. Fire this PUT request (replace the UUID with a valid one from your GET endpoint):</span><br><br>
+    <span style="color: #888;">// 2. Fire this PUT request (replace the UUID with a valid one):</span><br><br>
     <span style="color: #4CAF50;">curl -X PUT http://localhost:8080/api/subtitles/YOUR-UUID-HERE \<br>
         -H "Content-Type: text/plain" \<br>
         -d "Live WebSockets working!"</span>
@@ -36,3 +49,4 @@
     });
 </script>
 </body>
+</html>
