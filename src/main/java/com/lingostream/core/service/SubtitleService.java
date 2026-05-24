@@ -132,11 +132,10 @@ public class SubtitleService {
             subtitle.setContent(newContent);
             SubtitleEntity savedSubtitle = subtitleRepository.save(subtitle);
 
-            // --- THE WEBSOCKET BROADCAST ---
-            // Shout the new subtitle data to anyone subscribed to this specific video's channel
-            String destination = "/topic/subtitles/" + savedSubtitle.getVideoId();
-            messagingTemplate.convertAndSend(destination, savedSubtitle);
-            log.info("Broadcasted live update to {}", destination);
+            // --- SCALABLE BROADCASTING ---
+            // Instead of sending to local WebSockets, we publish to the global Redis cluster.
+            // The RedisMessageSubscriber on ALL server instances will catch this and push to their local users.
+            redissonClient.getTopic("global-subtitle-updates").publish(savedSubtitle);
 
             return savedSubtitle;
 
