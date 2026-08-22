@@ -41,6 +41,8 @@ build/
 ehthumbs.db
 Thumbs.db
 
+lingostream_audit_report.md
+
 ### Logs ###
 logs/
 *.log
